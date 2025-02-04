@@ -10,7 +10,7 @@ app = Flask(__name__)
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return open("index.html").read()
 
 @app.route("/calculate", methods=["POST"])
 def calculate():
