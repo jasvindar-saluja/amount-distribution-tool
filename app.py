@@ -2,11 +2,16 @@ from flask import Flask, request, jsonify, render_template, make_response
 import csv
 import io
 from reportlab.lib import colors
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfbase import pdfmetrics
 from reportlab.lib.pagesizes import letter, landscape
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
 
 app = Flask(__name__)
+
+# Register a font that supports the Rupee symbol
+pdfmetrics.registerFont(TTFont('ArialUnicode', '/path/to/arial-unicode-ms.ttf'))
 
 @app.route("/")
 def index():
@@ -41,7 +46,7 @@ def calculate():
                     amount_contributed = member_share * receiver_share
 
                     member_total += amount_contributed
-                    member_row["details"].append({"contributor": contributor_member, "amount": amount_contributed})
+                    member_row["details"].append({"contributor": contributor_member.strip(), "amount": amount_contributed})
 
             receiver_group_total += member_total
             member_row["subtotal"] = member_total
@@ -67,7 +72,7 @@ def export_csv():
     for group in data:
         for member in group["members"]:
             for detail in member["details"]:
-                writer.writerow([group["group_name"], member["receiver"], detail["contributor"], detail["amount"]])
+                writer.writerow([group["group_name"].strip(), member["receiver"].strip(), detail["contributor"].strip(), detail["amount"]])
 
     # Insert a blank row to separate perspectives
     writer.writerow([])
@@ -106,6 +111,8 @@ def export_pdf():
 
     # Set up table styles
     style = getSampleStyleSheet()
+    style['Normal'].fontName = 'ArialUnicode'
+
     elements = [Paragraph("Amount Distribution Report", style['Title'])]
 
     # Receiver's Perspective Table
@@ -115,14 +122,14 @@ def export_pdf():
     for group in data:
         for member in group["members"]:
             for detail in member["details"]:
-                table_data.append([group["group_name"], member["receiver"], detail["contributor"], f"₹{detail['amount']:.2f}"])
+                table_data.append([group["group_name"], member["receiver"].strip(), detail["contributor"], f"₹{detail['amount']:.2f}"])
 
     table = Table(table_data)
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 0), (-1, 0), 'ArialUnicode'),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
         ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
@@ -154,7 +161,7 @@ def export_pdf():
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 0), (-1, 0), 'ArialUnicode'),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
         ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),

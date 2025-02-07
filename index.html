@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -139,6 +140,12 @@
             margin-top: 5px;
         }
 
+        .success-message {
+            color: green;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
         .export-section {
             margin-top: 20px;
             padding: 15px;
@@ -177,6 +184,33 @@
             font-size: 2rem;
         }
 
+
+        /* Chart container style */
+        .chart-container {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+
+        .chart-section {
+            margin: 20px auto;
+            width: 90%;
+            max-width: 800px;
+            /* Limit max width to 800px */
+            text-align: center;
+        }
+
+        canvas {
+            width: 100% !important;
+            /* Make canvas responsive */
+            height: 400px !important;
+            /* Set a height for better display */
+            max-height: 400px;
+        }
+
         @media (max-width: 768px) {
 
             table,
@@ -190,6 +224,11 @@
             button {
                 padding: 8px;
                 font-size: 14px;
+            }
+
+            canvas {
+                height: 300px !important;
+                /* Reduce height for smaller screens */
             }
         }
     </style>
@@ -212,41 +251,65 @@
         <!-- Contributor Group Section -->
         <div class="section" id="contributorSection">
             <h2>Contributor Group</h2>
+            <!-- Success Message -->
+            <p id="contributorSuccessMessage" class="success-message" style="display: none;">
+                Contributor group added successfully!
+            </p>
             <div class="inline-inputs">
-                <input type="text" id="contributorGroupName" placeholder="Contributor Group Name">
-                <input type="number" id="contributorPercentage" placeholder="Percentage (%)">
-                <input type="text" id="contributorMembers" placeholder="Members (comma-separated)">
+                <!-- Group Input Fields -->
+                <input type="text" id="contributorGroupName" placeholder="Contributor Group Name" required>
+                <input type="number" id="contributorPercentage" placeholder="Percentage (%)" required>
+                <input type="text" id="contributorMembers" placeholder="Members (comma-separated)" required>
+
+                <!-- Hidden Input Field to store edit index -->
+                <input type="hidden" id="editIndex" value="">
+
+                <!-- Action Buttons -->
                 <button id="addContributorGroup">Add Contributor Group</button>
+                <button id="updateContributorGroup" style="display: none;">Update Contributor Group</button>
             </div>
-            <p id="contributorMessage" class="message"></p>
+            <p id="contributorMessage" class="success-message"></p>
             <table id="contributorPreviewTable">
                 <thead>
                     <tr>
                         <th>Group Name</th>
                         <th>Percentage (%)</th>
                         <th>Members</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody></tbody>
+                <tbody id="contributorPreviewBody"></tbody>
             </table>
         </div>
 
         <!-- Receiver Group Section -->
         <div class="section" id="receiverSection">
             <h2>Receiver Group</h2>
+            <!-- Success Message -->
+            <p id="receiverSuccessMessage" class="success-message" style="display: none;">
+                Receiver group added successfully!
+            </p>
             <div class="inline-inputs">
-                <input type="text" id="receiverGroupName" placeholder="Receiver Group Name">
-                <input type="number" id="receiverPercentage" placeholder="Percentage (%)">
-                <input type="text" id="receiverMembers" placeholder="Members (comma-separated)">
+                <!-- Group Input Fields -->
+                <input type="text" id="receiverGroupName" placeholder="Receiver Group Name" required>
+                <input type="number" id="receiverPercentage" placeholder="Percentage (%)" required>
+                <input type="text" id="receiverMembers" placeholder="Members (comma-separated)" required>
+
+                <!-- Hidden Input Field to store edit index -->
+                <input type="hidden" id="editIndex" value="">
+
+                <!-- Action Buttons -->
                 <button id="addReceiverGroup">Add Receiver Group</button>
+                <button id="updateReceiverGroup" style="display: none;">Update Receiver Group</button>
             </div>
-            <p id="receiverMessage" class="message"></p>
+            <p id="receiverMessage" class="success-message"></p>
             <table id="receiverPreviewTable">
                 <thead>
                     <tr>
                         <th>Group Name</th>
                         <th>Percentage (%)</th>
                         <th>Members</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -312,13 +375,39 @@
                 </table>
             </div>
         </div>
-    </div>
 
+
+        <div class="chart-container">
+            <h3>Charts</h3>
+            <div class="cta-buttons">
+                <!-- New Show Graphs Button -->
+                <button id="showGraphs">Show Graphs</button>
+            </div>
+            <!-- Chart Section -->
+            <!-- Chart Section for Receiver's Perspective -->
+            <div class="chart-section" style="display: none;" id="chartSectionReceiver">
+                <h2>Receiver's Perspective Chart</h2>
+                <canvas id="receiverChart"></canvas>
+            </div>
+
+            <!-- Chart Section for Contributor's Perspective -->
+            <div class="chart-section" style="display: none;" id="chartSectionContributor">
+                <h2>Contributor's Perspective Chart</h2>
+                <canvas id="contributorChart"></canvas>
+            </div>
+            <label for="chartType">Select Chart Type:</label>
+            <select id="chartType">
+                <option value="bar">Stacked Bar</option>
+                <option value="grouped-bar">Grouped Bar</option>
+                <option value="pie">Pie Chart</option>
+            </select>
+        </div>
+    </div>
     <script>
         let contributors = [];
         let receivers = [];
 
-        // Add Amount
+        // Add Amount CTA
         document.getElementById("addAmount").addEventListener("click", function () {
             const totalAmount = parseFloat(document.getElementById("totalAmount").value);
             if (isNaN(totalAmount) || totalAmount <= 0) {
@@ -328,7 +417,11 @@
             document.getElementById("amountPreview").textContent = `Amount added: ₹${totalAmount}`;
         });
 
-        // Add Contributor Group
+        // Restrict input in the members field to valid characters only
+        document.getElementById("contributorMembers").addEventListener("input", function () {
+            this.value = this.value.replace(/[^A-Za-z0-9,]/g, '');
+        });
+        // Add Contributor Group CTA
         document.getElementById("addContributorGroup").addEventListener("click", function () {
             const name = document.getElementById("contributorGroupName").value;
             const percentage = parseFloat(document.getElementById("contributorPercentage").value);
@@ -339,13 +432,36 @@
                 return;
             }
 
+            // Check if the input matches the valid pattern
+            if (!/^[A-Za-z0-9,]+$/.test(members)) {
+                alert("Invalid input! Only letters, numbers, and commas are allowed.");
+                return;
+            }
+
+            // Proceed with form submission
+            console.log("Contributor group added successfully.");
+
             contributors.push({ name, percentage, members });
+            // Clear input fields
             clearContributorFields();
+            // Refresh the preview table
             displayContributorGroups();
-            document.getElementById("contributorMessage").textContent = "Contributor group added successfully!";
+            // Show success message
+            const successMessage = document.getElementById("contributorSuccessMessage");
+            successMessage.style.display = "block";
+
+            // Hide the message after 3 seconds
+            setTimeout(function () {
+                successMessage.style.display = "none";
+            }, 3000);
         });
 
-        // Add Receiver Group
+
+        // Restrict input in the members field to valid characters only
+        document.getElementById("receiverMembers").addEventListener("input", function () {
+            this.value = this.value.replace(/[^A-Za-z0-9,]/g, '');
+        });
+        // Add Receiver Group CTA
         document.getElementById("addReceiverGroup").addEventListener("click", function () {
             const name = document.getElementById("receiverGroupName").value;
             const percentage = parseFloat(document.getElementById("receiverPercentage").value);
@@ -356,10 +472,28 @@
                 return;
             }
 
+            // Check if the input matches the valid pattern
+            if (!/^[A-Za-z0-9,]+$/.test(members)) {
+                alert("Invalid input! Only letters, numbers, and commas are allowed.");
+                return;
+            }
+
             receivers.push({ name, percentage, members });
+
+            // Clear input fields
             clearReceiverFields();
+
+            // Refresh the preview table
             displayReceiverGroups();
-            document.getElementById("receiverMessage").textContent = "Receiver group added successfully!";
+
+            // Show success message
+            const successMessage = document.getElementById("receiverSuccessMessage");
+            successMessage.style.display = "block";
+
+            // Hide the message after 3 seconds
+            setTimeout(function () {
+                successMessage.style.display = "none";
+            }, 3000);
         });
 
         // Send data to backend on Calculate button click
@@ -454,7 +588,7 @@
                 contributions.forEach(entry => {
                     const contributionRow = document.createElement("tr");
                     contributionRow.classList.add("matrix-member-row");
-                    contributionRow.innerHTML = `<td></td><td>${entry.receiverGroup} - ${entry.receiverMember}</td><td>₹${entry.amount.toFixed(2)}</td>`;
+                    contributionRow.innerHTML = `<td></td><td>${entry.receiverMember}</td><td>₹${entry.amount.toFixed(2)}</td>`;
                     tbody.appendChild(contributionRow);
                     contributorTotal += entry.amount;
                 });
@@ -531,32 +665,305 @@
             const tbody = document.getElementById("contributorPreviewTable").querySelector("tbody");
             tbody.innerHTML = "";
 
-            contributors.forEach(group => {
+            contributors.forEach((group, index) => {
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
-                    <td>${group.name}</td>
-                    <td>${group.percentage}</td>
-                    <td>${group.members.join(", ")}</td>
-                `;
+            <td>${group.name}</td>
+            <td>${group.percentage}</td>
+            <td>${group.members.join(", ")}</td>
+            <td>
+                <a href="#" class="contributor-edit-link" data-index="${index}">Edit</a> |
+                <a href="#" class="contributor-delete-link" data-index="${index}">Delete</a>
+            </td>
+        `;
                 tbody.appendChild(tr);
             });
         }
+
+        // Added an event listener for Edit links. When clicked, it populates the input fields for editing: (Contributor Group)
+        document.addEventListener("click", function (event) {
+            if (event.target.classList.contains("contributor-edit-link")) {
+                event.preventDefault();
+
+                const index = event.target.getAttribute("data-index");
+                const group = contributors[index];
+
+                // Populate input fields
+                document.getElementById("contributorGroupName").value = group.name;
+                document.getElementById("contributorPercentage").value = group.percentage;
+                document.getElementById("contributorMembers").value = group.members.join(", ");
+
+                // Set the index for updating
+                document.getElementById("editIndex").value = index;
+
+                // Show update button and hide add button
+                document.getElementById("addContributorGroup").style.display = "none";
+                document.getElementById("updateContributorGroup").style.display = "block";
+            }
+        });
+
+        // Added a handler to save the updated group details (Contributor Group)
+        document.getElementById("updateContributorGroup").addEventListener("click", function () {
+            const index = document.getElementById("editIndex").value;
+
+            // Update the group data
+            contributors[index] = {
+                name: document.getElementById("contributorGroupName").value,
+                percentage: parseFloat(document.getElementById("contributorPercentage").value),
+                members: document.getElementById("contributorMembers").value.split(",").map(m => m.trim())
+            };
+
+            // Refresh the preview and reset the form
+            displayContributorGroups();
+            clearContributorFields();
+
+            // Switch buttons
+            document.getElementById("addContributorGroup").style.display = "block";
+            document.getElementById("updateContributorGroup").style.display = "none";
+        });
+
+        // Added a handler for deleting a group: (Contributor Group)
+        document.addEventListener("click", function (event) {
+            if (event.target.classList.contains("contributor-delete-link")) {
+                event.preventDefault();
+
+                const index = event.target.getAttribute("data-index");
+
+                // Ask for confirmation before deleting
+                if (confirm("Are you sure you want to delete this Contributor group?")) {
+                    // Remove the group and refresh the preview
+                    contributors.splice(index, 1);
+                    displayContributorGroups();
+                }
+            }
+        });
 
         // Display Receiver group in preview table     
         function displayReceiverGroups() {
             const tbody = document.getElementById("receiverPreviewTable").querySelector("tbody");
             tbody.innerHTML = "";
 
-            receivers.forEach(group => {
+            receivers.forEach((group, index) => {
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
                     <td>${group.name}</td>
                     <td>${group.percentage}</td>
                     <td>${group.members.join(", ")}</td>
-                `;
+            <td>
+                <a href="#" class="receiver-edit-link" data-index="${index}">Edit</a> |
+                <a href="#" class="receiver-delete-link" data-index="${index}">Delete</a>
+            </td>
+            `;
                 tbody.appendChild(tr);
             });
         }
+
+        // Added an event listener for Edit links. When clicked, it populates the input fields for editing: (Receiver Group)
+        document.addEventListener("click", function (event) {
+            if (event.target.classList.contains("receiver-edit-link")) {
+                event.preventDefault();
+
+                const index = event.target.getAttribute("data-index");
+                const group = receivers[index];
+
+                // Populate input fields
+                document.getElementById("receiverGroupName").value = group.name;
+                document.getElementById("receiverPercentage").value = group.percentage;
+                document.getElementById("receiverMembers").value = group.members.join(", ");
+
+                // Set the index for updating
+                document.getElementById("editIndex").value = index;
+
+                // Show update button and hide add button
+                document.getElementById("addReceiverGroup").style.display = "none";
+                document.getElementById("updateReceiverGroup").style.display = "block";
+            }
+        });
+
+        // Added a handler to save the updated group details (Receiver Group)
+        document.getElementById("updateReceiverGroup").addEventListener("click", function () {
+            const index = document.getElementById("editIndex").value;
+
+            // Update the group data
+            receivers[index] = {
+                name: document.getElementById("receiverGroupName").value,
+                percentage: parseFloat(document.getElementById("receiverPercentage").value),
+                members: document.getElementById("receiverMembers").value.split(",").map(m => m.trim())
+            };
+
+            // Refresh the preview and reset the form
+            displayReceiverGroups();
+            clearReceiverFields();
+
+            // Switch buttons
+            document.getElementById("addReceiverGroup").style.display = "block";
+            document.getElementById("updateReceiverGroup").style.display = "none";
+        });
+
+        // Added a handler for deleting a group: (Receiver Group)
+        document.addEventListener("click", function (event) {
+            if (event.target.classList.contains("receiver-delete-link")) {
+                event.preventDefault();
+
+                const index = event.target.getAttribute("data-index");
+
+                // Ask for confirmation before deleting
+                if (confirm("Are you sure you want to delete this Receiver group?")) {
+                    // Remove the group and refresh the preview
+                    receivers.splice(index, 1);
+                    displayReceiverGroups();
+                }
+            }
+        });
+
+        // Function to clean and extract text content
+        function trimText(text) {
+            return text ? text.trim() : "";
+        }
+
+        let contributorChartInstance = null;
+        let receiverChartInstance = null;
+
+        // Function to render the charts
+        function renderCharts(chartType = 'bar') {
+            // --- Destroy existing charts if they exist ---
+            if (contributorChartInstance) {
+                contributorChartInstance.destroy();
+            }
+            if (receiverChartInstance) {
+                receiverChartInstance.destroy();
+            }
+
+            // --- Contributors Perspective Chart ---
+            const receiverRows = document.getElementById("matrixTableReceiver").querySelector("tbody").rows;
+
+            const receivers = [];
+            const contributors = new Set();
+            const contributorData = {};
+
+            Array.from(receiverRows).forEach(row => {
+                const cells = row.cells;
+                if (cells.length === 3) {
+                    const receiver = trimText(cells[0].textContent);
+                    const contributor = trimText(cells[1].textContent);
+                    const amount = parseFloat(trimText(cells[2].textContent).replace(/₹/, ''));
+
+                    if (!receivers.includes(receiver)) receivers.push(receiver);
+                    contributors.add(contributor);
+
+                    if (!contributorData[receiver]) contributorData[receiver] = {};
+                    contributorData[receiver][contributor] = (contributorData[receiver][contributor] || 0) + amount;
+                }
+            });
+
+            const contributorsArray = Array.from(contributors);
+
+            // Datasets for Contributors Perspective
+            const contributorDatasets = contributorsArray.map((contributor, index) => ({
+                label: contributor,
+                data: receivers.map(receiver => contributorData[receiver][contributor] || 0),
+                backgroundColor: `rgba(${(index * 60) % 255}, ${(index * 90) % 255}, 180, 0.5)`,
+                borderColor: `rgba(${(index * 60) % 255}, ${(index * 90) % 255}, 180, 1)`,
+                borderWidth: 1
+            }));
+
+            // --- Render Contributors Perspective Chart ---
+            const contributorCtx = document.getElementById('contributorChart').getContext('2d');
+            contributorChartInstance = new Chart(contributorCtx, {
+                type: chartType === 'grouped-bar' ? 'bar' : chartType,
+                data: {
+                    labels: receivers,  // Your parsed receiver data
+                    datasets: contributorDatasets  // Your parsed contributor data
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function (tooltipItem) {
+                                    return `${tooltipItem.dataset.label} to ${tooltipItem.label}: ₹${tooltipItem.raw.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: chartType === 'pie' ? {} : {
+                        x: {
+                            stacked: chartType === 'bar',
+                            title: { display: true, text: 'Receivers' }
+                        },
+                        y: {
+                            stacked: chartType === 'bar',
+                            beginAtZero: true,
+                            title: { display: true, text: 'Amount (₹)' }
+                        }
+                    }
+                }
+            });
+
+            // --- Receivers Perspective Chart ---
+            const receiverDatasets = receivers.map((receiver, index) => ({
+                label: receiver,
+                data: contributorsArray.map(contributor => contributorData[receiver][contributor] || 0),
+                backgroundColor: `rgba(${(index * 70) % 255}, ${(index * 110) % 255}, 150, 0.5)`,
+                borderColor: `rgba(${(index * 70) % 255}, ${(index * 110) % 255}, 150, 1)`,
+                borderWidth: 1
+            }));
+
+            const receiverCtx = document.getElementById('receiverChart').getContext('2d');
+            receiverChartInstance = new Chart(receiverCtx, {
+                type: chartType === 'grouped-bar' ? 'bar' : chartType,
+                data: {
+                    labels: contributorsArray,  // Your parsed contributor data
+                    datasets: receiverDatasets  // Your parsed receiver data
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function (tooltipItem) {
+                                    return `${tooltipItem.dataset.label} from ${tooltipItem.label}: ₹${tooltipItem.raw.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: chartType === 'pie' ? {} : {
+                        x: {
+                            stacked: chartType === 'bar',
+                            title: { display: true, text: 'Contributors' }
+                        },
+                        y: {
+                            stacked: chartType === 'bar',
+                            beginAtZero: true,
+                            title: { display: true, text: 'Amount (₹)' }
+                        }
+                    }
+                }
+            });
+        }
+
+
+        // Event listener for the "Show Graphs" button
+        document.getElementById("showGraphs").addEventListener("click", function () {
+            // Show the chart sections
+            document.getElementById("chartSectionReceiver").style.display = "block";
+            document.getElementById("chartSectionContributor").style.display = "block";
+
+            // Render the charts with default chart type
+            renderCharts('bar');
+        });
+
+        // Event listener to handle chart type selection
+        document.getElementById("chartType").addEventListener("change", function () {
+            const chartType = this.value;
+
+            // Re-render charts with the selected type
+            renderCharts(chartType);
+        });
 
         // PNG Export
         document.getElementById("exportPNG").addEventListener("click", function () {
@@ -656,8 +1063,6 @@
             XLSX.writeFile(wb, "amount_distribution.xlsx");
         });
 
-
-
         // Reset Button Event Listener
         document.addEventListener("DOMContentLoaded", function () {
             // Attach the reset button event listener
@@ -677,6 +1082,8 @@
                 console.error("Reset button not found!");
             }
         });
+
+
     </script>
 </body>
 
