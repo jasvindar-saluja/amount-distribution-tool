@@ -1,17 +1,18 @@
 from flask import Flask, request, jsonify, render_template, make_response
 import csv
 import io
-from reportlab.lib import colors
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfbase import pdfmetrics
+
 from reportlab.lib.pagesizes import letter, landscape
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfbase import pdfmetrics
 from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
 
 app = Flask(__name__)
 
-# Register a font that supports the Rupee symbol
-pdfmetrics.registerFont(TTFont('ArialUnicode', '/path/to/arial-unicode-ms.ttf'))
+# Register the Noto Sans font to support the ₹ symbol
+pdfmetrics.registerFont(TTFont('NotoSans', 'fonts/NotoSans-Regular.ttf'))
 
 @app.route("/")
 def index():
@@ -111,7 +112,7 @@ def export_pdf():
 
     # Set up table styles
     style = getSampleStyleSheet()
-    style['Normal'].fontName = 'ArialUnicode'
+    style['Normal'].fontName = 'NotoSans'
 
     elements = [Paragraph("Amount Distribution Report", style['Title'])]
 
@@ -129,7 +130,7 @@ def export_pdf():
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'ArialUnicode'),
+        ('FONTNAME', (0, 0), (-1, -1), 'NotoSans'),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
         ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
@@ -161,7 +162,7 @@ def export_pdf():
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'ArialUnicode'),
+        ('FONTNAME', (0, 0), (-1, -1), 'NotoSans'),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
         ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
