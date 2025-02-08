@@ -1,22 +1,34 @@
-from flask import Flask, request, jsonify, render_template, make_response
+from flask import Flask, request, jsonify, render_template, make_response, send_from_directory
 import csv
 import io
 
 from reportlab.lib.pagesizes import letter, landscape
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, PageTemplate, Frame
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase import pdfmetrics
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
+from reportlab.pdfgen import canvas
 
 app = Flask(__name__)
 
 # Register the Noto Sans font to support the ₹ symbol
 pdfmetrics.registerFont(TTFont('NotoSans', 'fonts/NotoSans-Regular.ttf'))
 
-@app.route("/")
-def index():
-    return open("index.html").read()
+# Serve index.html from the root directory
+@app.route('/')
+def serve_index():
+    return send_from_directory('.', 'index.html')
+
+# Serve static files from the assets folder for assets like logo and favicon
+@app.route('/assets/<path:filename>')
+def static_assets(filename):
+    return send_from_directory('assets', filename)
+
+# Route to serve favicon.ico
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory('assets', 'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
 @app.route("/calculate", methods=["POST"])
 def calculate():
@@ -104,11 +116,37 @@ def export_csv():
     response.headers["Content-Type"] = "text/csv"
     return response
 
+# Function to draw the header and footer
+def add_page_header_footer(canvas, doc):
+    canvas.saveState()
+    
+    # Draw header
+    canvas.setFont("NotoSans", 12)
+
+    # Center-align title
+    canvas.drawCentredString(400, 550, "Amount Distribution Report")
+
+    # Add logo
+    logo_path = "assets/logo.png"
+    try:
+        canvas.drawImage(logo_path, 30, 550, width=50, height=50, preserveAspectRatio=True, mask='auto')
+    except Exception as e:
+        print(f"Server error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+    # Draw footer
+    canvas.setFont("NotoSans", 10)
+    canvas.drawCentredString(400, 30, "© 2025 Your Company Name. All rights reserved.")
+
+    canvas.restoreState()
+
 @app.route("/export_pdf", methods=["POST"])
 def export_pdf():
     data = request.json["matrix"]
     output = io.BytesIO()
     pdf = SimpleDocTemplate(output, pagesize=landscape(letter))
+
+    elements = [Paragraph("Amount Distribution Report", getSampleStyleSheet()['Title'])]
 
     # Set up table styles
     style = getSampleStyleSheet()
@@ -123,8 +161,14 @@ def export_pdf():
     for group in data:
         for member in group["members"]:
             for detail in member["details"]:
-                table_data.append([group["group_name"], member["receiver"].strip(), detail["contributor"], f"₹{detail['amount']:.2f}"])
+                table_data.append([
+                    group["group_name"],
+                    member["receiver"],
+                    detail["contributor"],
+                    f"₹{detail['amount']:.2f}"
+                ])
 
+    # Create and style the table
     table = Table(table_data)
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
@@ -135,7 +179,11 @@ def export_pdf():
         ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
     ]))
+
     elements.append(table)
+
+    # Build the PDF with the header and footer on each page
+    pdf.build(elements, onFirstPage=add_page_header_footer, onLaterPages=add_page_header_footer)
 
     # Contributor's Perspective Table
     elements.append(Paragraph("Contributor's Perspective", style['Heading2']))
@@ -175,6 +223,10 @@ def export_pdf():
     response.headers["Content-Disposition"] = "attachment; filename=amount_distribution.pdf"
     response.headers["Content-Type"] = "application/pdf"
     return response
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return "Page not found!", 404
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0")

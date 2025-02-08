@@ -5,31 +5,87 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Amount Distribution Tool</title>
+    <link rel="icon" type="image/x-icon" href="/assets/favicon.ico?v=1.0">
+    <link rel="manifest" href="/manifest.json"> <meta name="theme-color" content="#007bff">
     <!-- Font Awesome Icons (Add here) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            padding: 0;
-            background-color: #f4f4f4;
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(registration => console.log('Service Worker registered:', registration))
+                .catch(error => console.error('Service Worker registration failed:', error));
         }
+    </script>
+    <style>
+        /* Body and Wrapper Styling */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            color: #212529;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .page-wrapper {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            /* Full viewport height */
+        }
+
+
 
         .container {
-            max-width: 900px;
-            margin: auto;
-            background: white;
+            background-color: #ffffff;
+            border: 1px solid #ddd;
             padding: 20px;
+            margin: 20px auto;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            max-width: 900px;
             border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
 
-        h1 {
-            text-align: center;
-            color: #333;
+        /* Header Styling */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            padding: 20px;
+            background-color: #007bff;
+            color: white;
+            border-bottom: 2px solid #0056b3;
+            width: 100%;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Main Container (Takes remaining space) */
+        .main-container {
+            flex: 1;
+            padding: 20px;
+            max-width: 900px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .header .logo {
+            height: 50px;
+            width: 50px;
         }
 
         label {
@@ -38,29 +94,34 @@
             margin: 10px 0 5px;
         }
 
-        input,
-        button {
+        /* Input Fields */
+        input[type="text"],
+        input[type="number"] {
             width: 100%;
             padding: 10px;
-            margin: 5px 0 10px;
-            font-size: 16px;
+            margin: 10px 0;
             border: 1px solid #ccc;
-            border-radius: 4px;
-            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+            border-radius: 5px;
+            font-size: 16px;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
-        input:focus {
-            outline: none;
+        input[type="text"]:focus,
+        input[type="number"]:focus {
             border-color: #007bff;
-            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+            outline: none;
         }
 
+        /* Buttons */
         button {
             background-color: #007bff;
-            color: white;
+            color: #ffffff;
             border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
             cursor: pointer;
-            border-radius: 4px;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         button:hover {
@@ -85,23 +146,25 @@
             border: 1px solid #ddd;
         }
 
+        /* Default Table Styles */
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
-            font-size: 14px;
+            margin: 20px 0;
         }
 
-        table,
-        th,
-        td {
+        table th,
+        table td {
             border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
         }
 
         th,
         td {
             padding: 10px;
             text-align: center;
+            border: 1px solid #ddd;
         }
 
         th {
@@ -109,6 +172,7 @@
             font-weight: bold;
         }
 
+        /* Matrix Group Header */
         .matrix-group-header {
             background-color: #007bff;
             color: white;
@@ -116,14 +180,17 @@
             text-align: center;
         }
 
+        /* Matrix Member Row */
         .matrix-member-row {
             background-color: #f9f9f9;
         }
 
+        /* Alternate Row Color */
         .matrix-member-row:nth-child(odd) {
             background-color: #e9ecef;
         }
 
+        /* Matrix Total Row */
         .matrix-total-row {
             background-color: #d1ecf1;
             font-weight: bold;
@@ -162,33 +229,158 @@
             margin-top: 10px;
         }
 
+
         .export-icon {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            display: inline-block;
+            margin: 10px;
+            padding: 10px;
+            text-align: center;
             cursor: pointer;
-            color: #007bff;
-            font-size: 1.5rem;
         }
 
         .export-icon:hover {
-            color: #0056b3;
-        }
-
-        .export-icon span {
-            margin-top: 5px;
-            font-size: 0.9rem;
+            background-color: #e0e0e0;
         }
 
         .export-icon i {
-            font-size: 2rem;
+            font-size: 24px;
         }
 
+        .export-icon span {
+            display: block;
+            margin-top: 5px;
+        }
+
+        /* Chart Controls Styling */
+        .chart-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 15px;
+        }
+
+        /* Styled Dropdown */
+        .styled-dropdown {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #ffffff;
+            color: #212529;
+            cursor: pointer;
+            transition: border-color 0.3s ease;
+        }
+
+        .styled-dropdown:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+
+
+
+        /* CTA Section Styling */
+        .cta-section {
+            margin-top: 20px;
+            padding: 15px;
+            text-align: center;
+            background-color: #f4f4f4;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        /* Styled Buttons */
+        .styled-btn {
+            display: inline-block;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 10px 5px;
+            background-color: #6c757d;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        .styled-btn:hover {
+            background-color: #5a6268;
+            transform: translateY(-3px);
+        }
+
+        /* Amount Button */
+        .amount-btn {
+            background-color: #28a745;
+            /* Green */
+        }
+
+        .amount-btn:hover {
+            background-color: #218838;
+            transform: translateY(-3px);
+        }
+
+        /* Contributor Button */
+        .contributor-btn {
+            background-color: #17a2b8;
+            /* Teal */
+        }
+
+        .contributor-btn:hover {
+            background-color: #138496;
+            transform: translateY(-3px);
+        }
+
+        /* Receiver Button */
+        .receiver-btn {
+            background-color: #ffc107;
+            /* Yellow */
+            color: #212529;
+        }
+
+        .receiver-btn:hover {
+            background-color: #e0a800;
+            transform: translateY(-3px);
+        }
+
+        /* Calculate Button */
+        .calculate-btn {
+            background-color: #007bff;
+        }
+
+        .calculate-btn:hover {
+            background-color: #0056b3;
+            transform: translateY(-3px);
+        }
+
+        /* Reset Button */
+        .reset-btn {
+            background-color: #dc3545;
+        }
+
+        .reset-btn:hover {
+            background-color: #b21f2d;
+            transform: translateY(-3px);
+        }
+
+        /* Graphs Button */
+        .graph-btn {
+            background-color: #6c757d;
+            /* Grey */
+        }
+
+        .graph-btn:hover {
+            background-color: #5a6268;
+            transform: translateY(-3px);
+        }
 
         /* Chart container style */
         .chart-container {
             margin-top: 20px;
             padding: 15px;
+            margin-bottom: 30px;
+            /* Add enough spacing to prevent overlap with footer */
             background-color: #f8f9fa;
             border-radius: 8px;
             text-align: center;
@@ -211,7 +403,305 @@
             max-height: 400px;
         }
 
+
+        /* Footer Styling */
+        .footer {
+            text-align: center;
+            padding: 15px;
+            background-color: #007bff;
+            color: white;
+            border-top: 2px solid #0056b3;
+
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 1000;
+        }
+
+        #searchInput {
+            width: 50%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            outline: none;
+        }
+
+        #searchInput:focus {
+            border-color: #007bff;
+        }
+
+
+        /* Theme Toggle Button */
+        .theme-icon {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #f1f1f1;
+            border-radius: 50%;
+            padding: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            z-index: 999;
+            transition: background-color 0.3s ease;
+        }
+
+        .theme-icon i {
+            font-size: 24px;
+            color: #555;
+        }
+
+        /* Hover effects */
+        .theme-icon:hover {
+            background-color: #ddd;
+        }
+
+        /* Dark Mode Styles */
+        body.dark-mode {
+            background-color: #121212;
+            color: #ffffff;
+        }
+
+        .dark-mode .container {
+            background-color: #1e1e1e;
+            border: 1px solid #444;
+            box-shadow: 0 2px 5px rgba(255, 255, 255, 0.1);
+        }
+
+        .dark-mode .main-container {
+            background-color: #1e1e1e;
+            border: 1px solid #444;
+            box-shadow: 0 2px 5px rgba(255, 255, 255, 0.1);
+        }
+
+        .dark-mode h1,
+        .dark-mode h2,
+        .dark-mode h3,
+        .dark-mode label {
+            color: #ffffff;
+        }
+
+        .dark-mode input[type="text"],
+        .dark-mode input[type="number"] {
+            background-color: #2c2c2c;
+            color: #ffffff;
+            border: 1px solid #555;
+        }
+
+        body.dark-mode input {
+            background-color: #2c2c2c;
+            color: #ffffff;
+            border: 1px solid #555;
+        }
+
+        .dark-mode button {
+            background-color: #333;
+            color: #ffffff;
+        }
+
+        /* Buttons in dark mode */
+        body.dark-mode button {
+            background-color: #333;
+            color: #ffffff;
+        }
+
+        .dark-mode table {
+            background-color: #1e1e1e;
+            color: #ffffff;
+        }
+
+        .dark-mode th {
+            background-color: #444;
+            color: #ffffff;
+        }
+
+        .dark-mode .theme-icon {
+            background-color: #333;
+        }
+
+        .dark-mode .theme-icon i {
+            color: #ffffff;
+        }
+
+        /* ----- Dark Mode Table Styling ----- */
+        body.dark-mode table {
+            background-color: #1e1e1e;
+            color: white;
+        }
+
+        body.dark-mode th {
+            background-color: #444;
+            color: white;
+        }
+
+        body.dark-mode td {
+            border: 1px solid #555;
+        }
+
+        /* Dark Mode Group Header */
+        body.dark-mode .matrix-group-header {
+            background-color: #0056b3;
+            /* Darker blue */
+            color: #ffffff;
+        }
+
+        /* Dark Mode Member Row */
+        body.dark-mode .matrix-member-row {
+            background-color: #2c2c2c;
+        }
+
+        body.dark-mode .matrix-member-row:nth-child(odd) {
+            background-color: #333;
+        }
+
+        /* Dark Mode Total Row */
+        body.dark-mode .matrix-total-row {
+            background-color: #444;
+            color: white;
+            border-top: 2px solid #007bff;
+        }
+
+        body.dark-mode .matrix-member-row:nth-child(odd) {
+            background-color: #333;
+        }
+
+        body.dark-mode .matrix-total-row {
+            background-color: #555;
+        }
+
+
+        body.dark-mode .cta-section {
+            background-color: #1e1e1e;
+            border: 1px solid #555;
+        }
+
+        body.dark-mode .export-icon:hover {
+            background-color: #444;
+        }
+
+        .search-container {
+            margin: 20px;
+            text-align: center;
+        }
+
+        body.dark-mode .chart-container {
+            background-color: #1e1e1e;
+            border: 1px solid #444;
+        }
+
+        body.dark-mode .header,
+        body.dark-mode .footer {
+            background-color: #1e1e1e;
+            border-color: #444;
+        }
+
+        body.dark-mode .logo {
+            filter: brightness(80%);
+        }
+
+        body.dark-mode #searchInput {
+            background-color: #2c2c2c;
+            color: white;
+            border: 1px solid #555;
+        }
+
+        body.dark-mode th {
+            background-color: #444;
+            color: white;
+        }
+
+        body.dark-mode td {
+            border: 1px solid #555;
+        }
+
+        /* Chart container in dark mode */
+        body.dark-mode .chart-container {
+            background-color: #1e1e1e;
+            border: 1px solid #444;
+        }
+
+        /* Export data section */
+        body.dark-mode .export-section {
+            background-color: #1e1e1e;
+            border: 1px solid #444;
+        }
+
+        /* Search input in dark mode */
+        body.dark-mode #searchInput {
+            background-color: #2c2c2c;
+            color: white;
+            border: 1px solid #555;
+        }
+
+        /* Dark mode section styles */
+        body.dark-mode .section {
+            background: #1e1e1e;
+            border: 1px solid #444;
+        }
+
+        /* Dark Mode Button Styling */
+        body.dark-mode .styled-btn {
+            color: #ffffff;
+        }
+
+        body.dark-mode .calculate-btn {
+            background-color: #0056b3;
+        }
+
+        body.dark-mode .reset-btn {
+            background-color: #b21f2d;
+        }
+
+        /* Dark Mode Buttons */
+        body.dark-mode .styled-btn {
+            color: #ffffff;
+        }
+
+        body.dark-mode .amount-btn {
+            background-color: #218838;
+        }
+
+        body.dark-mode .contributor-btn {
+            background-color: #138496;
+        }
+
+        body.dark-mode .receiver-btn {
+            background-color: #e0a800;
+            color: #ffffff;
+        }
+
+        body.dark-mode .graph-btn {
+            background-color: #5a6268;
+        }
+
+        /* Dropdown in dark mode */
+        body.dark-mode .styled-dropdown {
+            background-color: #2c2c2c;
+            color: #ffffff;
+            border: 1px solid #555;
+        }
+
         @media (max-width: 768px) {
+
+            .header {
+                flex-direction: column;
+                padding: 15px;
+            }
+
+            .header h1 {
+                font-size: 20px;
+            }
+
+            .logo {
+                height: 40px;
+                width: 40px;
+            }
+
+            .footer {
+                font-size: 14px;
+            }
 
             table,
             th,
@@ -230,159 +720,211 @@
                 height: 300px !important;
                 /* Reduce height for smaller screens */
             }
+
+            .chart-controls {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .styled-btn {
+                width: 100%;
+            }
+
+            .styled-dropdown {
+                width: 100%;
+            }
         }
     </style>
 </head>
 
 <body>
-    <div class="container">
-        <h1>Amount Distribution Tool</h1>
+    <!-- Wrapper for full-page layout -->
+    <div class="page-wrapper">
+        <!-- Header Section -->
+        <header class="header">
+            <a href="/" class="logo">
+                <img src="/assets/logo.png?v=1.0" alt="Logo" class="logo">
+            </a>
+            <h1>Amount Distribution Tool</h1>
+        </header>
 
-        <!-- Amount Input Section -->
-        <div class="section" id="amountSection">
-            <h2>Total Amount (₹)</h2>
-            <div class="inline-inputs">
-                <input type="number" id="totalAmount" placeholder="Enter the total amount">
-                <button id="addAmount">Add Amount</button>
-            </div>
-            <p id="amountPreview"></p>
+        <!-- Theme Toggle Icon -->
+        <div id="themeToggleBtn" class="theme-icon" title="Toggle Dark Mode">
+            <i class="fas fa-moon" id="themeIcon"></i>
         </div>
 
-        <!-- Contributor Group Section -->
-        <div class="section" id="contributorSection">
-            <h2>Contributor Group</h2>
-            <!-- Success Message -->
-            <p id="contributorSuccessMessage" class="success-message" style="display: none;">
-                Contributor group added successfully!
-            </p>
-            <div class="inline-inputs">
-                <!-- Group Input Fields -->
-                <input type="text" id="contributorGroupName" placeholder="Contributor Group Name" required>
-                <input type="number" id="contributorPercentage" placeholder="Percentage (%)" required>
-                <input type="text" id="contributorMembers" placeholder="Members (comma-separated)" required>
+        <!-- Main Container -->
+        <main class="main-container">
+            <div id="errorMessage" style="color: red; display: none;"></div>
+            <!-- Form Section -->
+            <!-- Amount Input Section -->
+            <div class="section" id="amountSection">
+                <h2>Total Amount (₹)</h2>
+                <div class="inline-inputs">
+                    <input type="number" id="totalAmount" placeholder="Enter the total amount">
+                    <button id="addAmount" class="styled-btn amount-btn">Add Amount</button>
 
-                <!-- Hidden Input Field to store edit index -->
-                <input type="hidden" id="editIndex" value="">
-
-                <!-- Action Buttons -->
-                <button id="addContributorGroup">Add Contributor Group</button>
-                <button id="updateContributorGroup" style="display: none;">Update Contributor Group</button>
-            </div>
-            <p id="contributorMessage" class="success-message"></p>
-            <table id="contributorPreviewTable">
-                <thead>
-                    <tr>
-                        <th>Group Name</th>
-                        <th>Percentage (%)</th>
-                        <th>Members</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="contributorPreviewBody"></tbody>
-            </table>
-        </div>
-
-        <!-- Receiver Group Section -->
-        <div class="section" id="receiverSection">
-            <h2>Receiver Group</h2>
-            <!-- Success Message -->
-            <p id="receiverSuccessMessage" class="success-message" style="display: none;">
-                Receiver group added successfully!
-            </p>
-            <div class="inline-inputs">
-                <!-- Group Input Fields -->
-                <input type="text" id="receiverGroupName" placeholder="Receiver Group Name" required>
-                <input type="number" id="receiverPercentage" placeholder="Percentage (%)" required>
-                <input type="text" id="receiverMembers" placeholder="Members (comma-separated)" required>
-
-                <!-- Hidden Input Field to store edit index -->
-                <input type="hidden" id="editIndex" value="">
-
-                <!-- Action Buttons -->
-                <button id="addReceiverGroup">Add Receiver Group</button>
-                <button id="updateReceiverGroup" style="display: none;">Update Receiver Group</button>
-            </div>
-            <p id="receiverMessage" class="success-message"></p>
-            <table id="receiverPreviewTable">
-                <thead>
-                    <tr>
-                        <th>Group Name</th>
-                        <th>Percentage (%)</th>
-                        <th>Members</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-
-        <!-- Call-to-Action Buttons -->
-        <div class="cta-buttons">
-            <button id="calculate">Calculate</button>
-            <button id="resetPage">Reset</button>
-        </div>
-
-        <!-- Export Data Section -->
-        <div class="export-section">
-            <h3>Export Data</h3>
-            <div class="export-icons">
-                <div class="export-icon" id="exportPNG">
-                    <i class="fas fa-file-image"></i>
-                    <span>PNG</span>
                 </div>
-                <div class="export-icon" id="exportPDF">
-                    <i class="fas fa-file-pdf"></i>
-                    <span>PDF</span>
-                </div>
-                <div class="export-icon" id="exportCSV">
-                    <i class="fas fa-file-csv"></i>
-                    <span>CSV</span>
-                </div>
-                <div class="export-icon" id="exportExcel">
-                    <i class="fas fa-file-excel"></i>
-                    <span>Excel</span>
-                </div>
+                <p id="amountPreview"></p>
             </div>
-        </div>
 
-        <!-- Results Section -->
-        <div class="section" id="resultSection">
-            <h2>Results: Receiver's Perspective</h2>
-            <div class="matrix-table-wrapper">
-                <table id="matrixTableReceiver">
+            <!-- Contributor Group Section -->
+            <div class="section" id="contributorSection">
+                <h2>Contributor Group</h2>
+                <!-- Success Message -->
+                <p id="contributorSuccessMessage" class="success-message" style="display: none;">
+                    Contributor group added successfully!
+                </p>
+                <div class="inline-inputs">
+                    <!-- Group Input Fields -->
+                    <input type="text" id="contributorGroupName" placeholder="Contributor Group Name" required>
+                    <input type="number" id="contributorPercentage" placeholder="Percentage (%)" required>
+                    <input type="text" id="contributorMembers" placeholder="Members (comma-separated)" required>
+
+                    <!-- Hidden Input Field to store edit index -->
+                    <input type="hidden" id="editIndex" value="">
+
+                    <!-- Action Buttons -->
+                    <button id="addContributorGroup" class="styled-btn contributor-btn">Add Contributor Group</button>
+                    <div id="errorMessage" style="color: red; display: none;"></div>
+                    <button id="updateContributorGroup" class="styled-btn contributor-btn" style="display: none;">Update
+                        Contributor Group</button>
+                </div>
+                <p id="contributorMessage" class="success-message"></p>
+                <table id="contributorPreviewTable">
                     <thead>
                         <tr>
-                            <th>Receiver Group / Member</th>
-                            <th>Contributor Group / Member</th>
-                            <th>Amount (₹)</th>
+                            <th>Group Name</th>
+                            <th>Percentage (%)</th>
+                            <th>Members</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="contributorPreviewBody"></tbody>
+                </table>
+            </div>
+
+            <!-- Receiver Group Section -->
+            <div class="section" id="receiverSection">
+                <h2>Receiver Group</h2>
+                <!-- Success Message -->
+                <p id="receiverSuccessMessage" class="success-message" style="display: none;">
+                    Receiver group added successfully!
+                </p>
+                <div class="inline-inputs">
+                    <!-- Group Input Fields -->
+                    <input type="text" id="receiverGroupName" placeholder="Receiver Group Name" required>
+                    <input type="number" id="receiverPercentage" placeholder="Percentage (%)" required>
+                    <input type="text" id="receiverMembers" placeholder="Members (comma-separated)" required>
+
+                    <!-- Hidden Input Field to store edit index -->
+                    <input type="hidden" id="editIndex" value="">
+
+                    <!-- Action Buttons -->
+                    <button id="addReceiverGroup" class="styled-btn receiver-btn">Add Receiver Group</button>
+                    <div id="errorMessage" style="color: red; display: none;"></div>
+                    <button id="updateReceiverGroup" class="styled-btn receiver-btn" style="display: none;">Update
+                        Receiver
+                        Group</button>
+                </div>
+                <p id="receiverMessage" class="success-message"></p>
+                <table id="receiverPreviewTable">
+                    <thead>
+                        <tr>
+                            <th>Group Name</th>
+                            <th>Percentage (%)</th>
+                            <th>Members</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
                 </table>
             </div>
 
-            <h2>Results: Contributor's Perspective</h2>
-            <div class="matrix-table-wrapper">
-                <table id="matrixTableContributor">
-                    <thead>
-                        <tr>
-                            <th>Contributor Group / Member</th>
-                            <th>Receiver Group / Member</th>
-                            <th>Amount (₹)</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+            <!-- Call-to-Action Buttons -->
+            <!-- CTA Section for Calculate and Reset -->
+            <div class="section cta-section">
+                <button id="calculate" class="styled-btn calculate-btn">Calculate</button>
+                <button id="resetPage" class="styled-btn reset-btn">Reset</button>
             </div>
-        </div>
 
 
-        <div class="chart-container">
-            <h3>Charts</h3>
-            <div class="cta-buttons">
-                <!-- New Show Graphs Button -->
-                <button id="showGraphs">Show Graphs</button>
+            <!-- Export Data Section -->
+            <div class="export-section">
+                <h3>Export Data</h3>
+                <div class="export-options">
+                    <div class="export-icon" id="exportPNG" aria-label="Export to PNG" title="Export to PNG">
+                        <i class="fas fa-file-image"></i>
+                        <span>PNG</span>
+                    </div>
+                    <div class="export-icon" id="exportPDF" aria-label="Export to PDF" title="Export to PDF">
+                        <i class="fas fa-file-pdf"></i>
+                        <span>PDF</span>
+                    </div>
+                    <div class="export-icon" id="exportCSV" aria-label="Export to CSV" title="Export to CSV">
+                        <i class="fas fa-file-csv"></i>
+                        <span>CSV</span>
+                    </div>
+                    <div class="export-icon" id="exportExcel" aria-label="Export to Excel" title="Export to Excel">
+                        <i class="fas fa-file-excel"></i>
+                        <span>Excel</span>
+                    </div>
+                </div>
             </div>
+
+            <!-- Results Section -->
+            <div class="section" id="resultSection">
+                <!-- Search Filter Input -->
+                <div class="search-container">
+                    <input type="text" id="searchInput" placeholder="Search..." onkeyup="filterTable()">
+                </div>
+
+                <h2>Results: Receiver's Perspective</h2>
+                <div class="matrix-table-wrapper">
+                    <table id="matrixTableReceiver">
+                        <thead>
+                            <tr>
+                                <th>Receiver Group / Member</th>
+                                <th>Contributor Group / Member</th>
+                                <th>Amount (₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <h2>Results: Contributor's Perspective</h2>
+                <div class="matrix-table-wrapper">
+                    <table id="matrixTableContributor">
+                        <thead>
+                            <tr>
+                                <th>Contributor Group / Member</th>
+                                <th>Receiver Group / Member</th>
+                                <th>Amount (₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+
+            <!-- Chart Section -->
+            <div class="chart-container">
+                <h2>Charts</h2>
+                <!-- Flex container for dropdown and button -->
+                <div class="chart-controls">
+                    <select id="chartType" class="styled-dropdown">
+                        <option value="bar">Bar Chart</option>
+                        <option value="line">Line Chart</option>
+                        <option value="pie">Pie Chart</option>
+                        <option value="grouped-bar">Grouped Bar Chart</option>
+                    </select>
+
+                    <button id="showGraphs" class="styled-btn graph-btn">Show Graphs</button>
+                </div>
+            </div>
+
             <!-- Chart Section -->
             <!-- Chart Section for Receiver's Perspective -->
             <div class="chart-section" style="display: none;" id="chartSectionReceiver">
@@ -395,13 +937,11 @@
                 <h2>Contributor's Perspective Chart</h2>
                 <canvas id="contributorChart"></canvas>
             </div>
-            <label for="chartType">Select Chart Type:</label>
-            <select id="chartType">
-                <option value="bar">Stacked Bar</option>
-                <option value="grouped-bar">Grouped Bar</option>
-                <option value="pie">Pie Chart</option>
-            </select>
-        </div>
+        </main>
+        <!-- Footer -->
+        <footer class="footer">
+            <p>© 2025 Amount Distribution Tool. All rights reserved.</p>
+        </footer>
     </div>
     <script>
         let contributors = [];
@@ -411,7 +951,7 @@
         document.getElementById("addAmount").addEventListener("click", function () {
             const totalAmount = parseFloat(document.getElementById("totalAmount").value);
             if (isNaN(totalAmount) || totalAmount <= 0) {
-                alert("Please enter a valid amount!");
+                showError("Please enter a valid total amount!");
                 return;
             }
             document.getElementById("amountPreview").textContent = `Amount added: ₹${totalAmount}`;
@@ -428,13 +968,13 @@
             const members = document.getElementById("contributorMembers").value.split(",");
 
             if (!name || isNaN(percentage) || percentage <= 0 || !members.length) {
-                alert("Please fill out all contributor fields!");
+                showError("Please fill out all contributor fields!");
                 return;
             }
 
             // Check if the input matches the valid pattern
             if (!/^[A-Za-z0-9,]+$/.test(members)) {
-                alert("Invalid input! Only letters, numbers, and commas are allowed.");
+                showError("Invalid input! Only letters, numbers, and commas are allowed.");
                 return;
             }
 
@@ -468,13 +1008,13 @@
             const members = document.getElementById("receiverMembers").value.split(",");
 
             if (!name || isNaN(percentage) || percentage <= 0 || !members.length) {
-                alert("Please fill out all receiver fields!");
+                showError("Please fill out all receiver fields!");
                 return;
             }
 
             // Check if the input matches the valid pattern
             if (!/^[A-Za-z0-9,]+$/.test(members)) {
-                alert("Invalid input! Only letters, numbers, and commas are allowed.");
+                showError("Invalid input! Only letters, numbers, and commas are allowed.");
                 return;
             }
 
@@ -500,11 +1040,11 @@
         document.getElementById("calculate").addEventListener("click", function () {
             const totalAmount = parseFloat(document.getElementById("totalAmount").value);
             if (isNaN(totalAmount) || totalAmount <= 0) {
-                alert("Please enter a valid total amount!");
+                showError("Please enter a valid total amount!");
                 return;
             }
 
-            fetch("/calculate", {
+            fetch(`${window.location.origin}/calculate`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -513,11 +1053,20 @@
                     receivers: receivers
                 })
             })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     displayMatrixReceiver(data);
                     displayMatrixContributor(data);
+                })
+                .catch(error => {
+                    console.error("Error:", error);
                 });
+
         });
 
         // Display Matrix Receiver View Results
@@ -824,6 +1373,15 @@
         let contributorChartInstance = null;
         let receiverChartInstance = null;
 
+        function setChartHeight(canvasId) {
+            const canvas = document.getElementById(canvasId);
+            if (window.innerWidth < 768) {
+                canvas.style.height = '300px';
+            } else {
+                canvas.style.height = '500px';
+            }
+        }
+
         // Function to render the charts
         function renderCharts(chartType = 'bar') {
             // --- Destroy existing charts if they exist ---
@@ -833,6 +1391,9 @@
             if (receiverChartInstance) {
                 receiverChartInstance.destroy();
             }
+            // Set responsive heights
+            setChartHeight('receiverChart');
+            setChartHeight('contributorChart');
 
             // --- Contributors Perspective Chart ---
             const receiverRows = document.getElementById("matrixTableReceiver").querySelector("tbody").rows;
@@ -1082,7 +1643,73 @@
                 console.error("Reset button not found!");
             }
         });
+        function showError(message) {
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
 
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, 5000);
+        }
+
+
+        // Get the theme toggle button and icon
+        const themeToggleBtn = document.getElementById('themeToggleBtn');
+        const themeIcon = document.getElementById('themeIcon');
+
+        // Check if dark mode is enabled in local storage
+        if (localStorage.getItem('theme') === 'dark') {
+            document.body.classList.add('dark-mode');
+            themeIcon.classList.replace('fa-moon', 'fa-sun');
+        }
+
+        // Event listener to toggle dark mode
+        themeToggleBtn.addEventListener('click', function () {
+            document.body.classList.toggle('dark-mode');
+            document.querySelectorAll('table').forEach(table => table.classList.toggle('dark-mode'));
+
+            // Toggle the icon between moon and sun
+            if (document.body.classList.contains('dark-mode')) {
+                themeIcon.classList.replace('fa-moon', 'fa-sun');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                themeIcon.classList.replace('fa-sun', 'fa-moon');
+                localStorage.setItem('theme', 'light');
+            }
+        });
+
+        function filterTable() {
+            const filter = document.getElementById('searchInput').value.toLowerCase();
+            const rows = document.querySelectorAll('table tbody tr');
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(filter) ? '' : 'none';
+            });
+        }
+
+        function saveData() {
+            const data = {
+                totalAmount: document.getElementById('totalAmount').value,
+                contributors: document.getElementById('contributorsInput').value,
+                receivers: document.getElementById('receiversInput').value
+            };
+            localStorage.setItem('appData', JSON.stringify(data));
+        }
+
+        function loadData() {
+            const data = JSON.parse(localStorage.getItem('appData'));
+            if (data) {
+                document.getElementById('totalAmount').value = data.totalAmount;
+                document.getElementById('contributorsInput').value = data.contributors;
+                document.getElementById('receiversInput').value = data.receivers;
+            }
+        }
+
+        // Call loadData on page load
+        window.onload = loadData;
 
     </script>
 </body>
